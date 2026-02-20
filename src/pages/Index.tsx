@@ -115,20 +115,49 @@ function SkillTicker() {
   );
 }
 
+/* ─── FORMSPREE ENDPOINT ────────────────────────── */
+const FORMSPREE_URL = "https://formspree.io/f/mdallbob";
+
 /* ─── MAIN COMPONENT ────────────────────────────── */
 export default function Index() {
   const [formData, setFormData] = useState({ name: "", email: "", skill: "" });
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [focused, setFocused] = useState<string | null>(null);
 
   const scrollToForm = () => {
     document.getElementById("waitlist-form")?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.name && formData.email && formData.skill) {
-      setSubmitted(true);
+    if (!formData.name || !formData.email || !formData.skill) return;
+
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      const res = await fetch(FORMSPREE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          skill: formData.skill,
+        }),
+      });
+
+      if (res.ok) {
+        setSubmitted(true);
+      } else {
+        const data = await res.json();
+        setError(data?.errors?.[0]?.message || "Something went wrong. Please try again.");
+      }
+    } catch {
+      setError("Network error. Please check your connection and try again.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -565,17 +594,39 @@ export default function Index() {
               {/* Divider */}
               <div className="h-px bg-white/5" />
 
+              {/* Error message */}
+              {error && (
+                <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-400">
+                  ⚠️ {error}
+                </div>
+              )}
+
               {/* Submit */}
               <button
                 type="submit"
-                className="group relative w-full overflow-hidden rounded-xl bg-primary py-4 text-sm font-bold text-white shadow-xl shadow-primary/30 transition-all hover:-translate-y-0.5 hover:shadow-primary/50 sm:text-base"
+                disabled={submitting}
+                className="group relative w-full overflow-hidden rounded-xl bg-primary py-4 text-sm font-bold text-white shadow-xl shadow-primary/30 transition-all hover:-translate-y-0.5 hover:shadow-primary/50 sm:text-base disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0"
               >
                 <span className="relative z-10 flex items-center justify-center gap-2">
-                  Request Early Access
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  {submitting ? (
+                    <>
+                      <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" />
+                      </svg>
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      Request Early Access
+                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    </>
+                  )}
                 </span>
                 {/* shimmer */}
-                <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent group-hover:translate-x-full transition-transform duration-700" />
+                {!submitting && (
+                  <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent group-hover:translate-x-full transition-transform duration-700" />
+                )}
               </button>
 
               <p className="text-center text-xs text-white/25">
